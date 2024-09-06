@@ -946,6 +946,7 @@ class InsertScriptFilter extends Filter {
     Element.prototype.insertBefore = function (elem) {
       var ele = null;
       var consented = false;
+      var filter = 0;
       if (arguments[0].tagName === 'SCRIPT') {
         //console.log('Inserting:', arguments);
         for (let key in window.CookieConsent.config.services) {
@@ -963,15 +964,17 @@ class InsertScriptFilter extends Filter {
                 } else {
                   ele.categories.push(window.CookieConsent.config.services[key].category);
                 }
+                filter++;
               } else {
                 ele = null;
                 consented = true;
+                filter = 0;
               }
             }
           }
         }
       }
-      if (!consented) {
+      if (filter > 0) {
         window.CookieConsent.buffer.insertBefore.push(ele);
         return;
       }
@@ -1495,14 +1498,11 @@ class Interface {
     // If you click submit on cookie settings
     document.getElementById('ccm__footer__consent-modal-submit').addEventListener('click', () => {
       var tabGroups = this.elements['modal'].querySelectorAll('.ccm__tabgroup');
-      console.log('switchElements', tabGroups);
       Array.prototype.forEach.call(tabGroups, tabGroup => {
         var lightSwitch = tabGroup.querySelector('button.ccm__switch-group');
         var status = lightSwitch.getAttribute('aria-checked');
-        console.log(tabGroup.dataset.category, status);
         window.CookieConsent.config.categories[tabGroup.dataset.category].wanted = status === 'true' ? true : false;
       });
-      console.log('window.CookieConsent.config.categories', window.CookieConsent.config.categories);
       var buttonSettings = document.querySelector('.ccb__edit');
       var buttonConsentGive = document.querySelector('.consent-give');
       var buttonConsentDecline = document.querySelector('.consent-decline');

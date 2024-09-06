@@ -40,6 +40,7 @@ export default class InsertScriptFilter extends Filter {
     
       var ele = null;
       var consented = false;
+      var filter = 0;
 
       if(arguments[0].tagName === 'SCRIPT') {
         //console.log('Inserting:', arguments);
@@ -58,16 +59,18 @@ export default class InsertScriptFilter extends Filter {
                 } else {
                   ele.categories.push(window.CookieConsent.config.services[key].category);
                 }
+                filter++;
               } else {
                 ele = null;
                 consented = true;
+                filter = 0;
               }
             }
           }
         }
       }
   
-      if (!consented) {
+      if (filter > 0) {
         window.CookieConsent.buffer.insertBefore.push(ele);
         return;
       }

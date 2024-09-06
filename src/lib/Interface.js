@@ -560,18 +560,13 @@ export default class Interface {
 
     // If you click submit on cookie settings
     document.getElementById('ccm__footer__consent-modal-submit').addEventListener('click', () => {
-
       var tabGroups = this.elements['modal'].querySelectorAll('.ccm__tabgroup');
 
-      console.log('switchElements', tabGroups);
       Array.prototype.forEach.call(tabGroups, (tabGroup) => {
         var lightSwitch = tabGroup.querySelector('button.ccm__switch-group');
         var status = lightSwitch.getAttribute('aria-checked');
-        console.log(tabGroup.dataset.category, status);
         window.CookieConsent.config.categories[tabGroup.dataset.category].wanted = (status === 'true') ? true : false;
       });
-
-      console.log('window.CookieConsent.config.categories', window.CookieConsent.config.categories);
 
       var buttonSettings = document.querySelector('.ccb__edit');
       var buttonConsentGive = document.querySelector('.consent-give');
