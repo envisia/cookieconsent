@@ -944,23 +944,36 @@ class InsertScriptFilter extends Filter {
   }
   overrideInsertBefore() {
     Element.prototype.insertBefore = function (elem) {
+      var ele = null;
+      var consented = false;
       if (arguments[0].tagName === 'SCRIPT') {
         //console.log('Inserting:', arguments);
         for (let key in window.CookieConsent.config.services) {
           // Did user opt-in?
           if (window.CookieConsent.config.services[key].type === 'dynamic-script') {
             if (arguments[0].outerHTML.indexOf(window.CookieConsent.config.services[key].search) >= 0) {
-              if (window.CookieConsent.config.categories[window.CookieConsent.config.services[key].category].wanted === false) {
-                window.CookieConsent.buffer.insertBefore.push({
-                  'this': this,
-                  'category': window.CookieConsent.config.services[key].category,
-                  arguments: arguments
-                });
-                return undefined;
+              if (window.CookieConsent.config.categories[window.CookieConsent.config.services[key].category].wanted === false && !consented) {
+                if (ele === null) {
+                  ele = {
+                    'this': this,
+                    'category': window.CookieConsent.config.services[key].category,
+                    'categories': [window.CookieConsent.config.services[key].category],
+                    arguments: arguments
+                  };
+                } else {
+                  ele.categories.push(window.CookieConsent.config.services[key].category);
+                }
+              } else {
+                ele = null;
+                consented = true;
               }
             }
           }
         }
+      }
+      if (!consented) {
+        window.CookieConsent.buffer.insertBefore.push(ele);
+        return;
       }
       return Node.prototype.insertBefore.apply(this, arguments);
     };
@@ -1481,10 +1494,15 @@ class Interface {
 
     // If you click submit on cookie settings
     document.getElementById('ccm__footer__consent-modal-submit').addEventListener('click', () => {
-      let switchElements = this.elements['modal'].querySelectorAll('.ccm__switch input');
-      Array.prototype.forEach.call(switchElements, switchElement => {
-        window.CookieConsent.config.categories[switchElement.dataset.category].wanted = switchElement.checked;
+      var tabGroups = this.elements['modal'].querySelectorAll('.ccm__tabgroup');
+      console.log('switchElements', tabGroups);
+      Array.prototype.forEach.call(tabGroups, tabGroup => {
+        var lightSwitch = tabGroup.querySelector('button.ccm__switch-group');
+        var status = lightSwitch.getAttribute('aria-checked');
+        console.log(tabGroup.dataset.category, status);
+        window.CookieConsent.config.categories[tabGroup.dataset.category].wanted = status === 'true' ? true : false;
       });
+      console.log('window.CookieConsent.config.categories', window.CookieConsent.config.categories);
       var buttonSettings = document.querySelector('.ccb__edit');
       var buttonConsentGive = document.querySelector('.consent-give');
       var buttonConsentDecline = document.querySelector('.consent-decline');
@@ -1519,9 +1537,16 @@ class Interface {
       }
     }
     for (let action of window.CookieConsent.buffer.insertBefore) {
-      if (window.CookieConsent.config.categories[action.category].wanted === true) {
-        action.arguments[1] = action.arguments[0].parentNode === null ? action.this.lastChild : action.arguments[1];
-        Node.prototype.insertBefore.apply(action.this, action.arguments);
+      if (action.categories && action.categories.length > 1) {
+        if (action.categories.some(c => window.CookieConsent.config.categories[c].wanted)) {
+          action.arguments[1] = action.arguments[0].parentNode === null ? action.this.lastChild : action.arguments[1];
+          Node.prototype.insertBefore.apply(action.this, action.arguments);
+        }
+      } else {
+        if (window.CookieConsent.config.categories[action.category].wanted === true) {
+          action.arguments[1] = action.arguments[0].parentNode === null ? action.this.lastChild : action.arguments[1];
+          Node.prototype.insertBefore.apply(action.this, action.arguments);
+        }
       }
     }
   }

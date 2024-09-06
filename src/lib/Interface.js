@@ -561,11 +561,17 @@ export default class Interface {
     // If you click submit on cookie settings
     document.getElementById('ccm__footer__consent-modal-submit').addEventListener('click', () => {
 
-      let switchElements = this.elements['modal'].querySelectorAll('.ccm__switch input');
+      var tabGroups = this.elements['modal'].querySelectorAll('.ccm__tabgroup');
 
-      Array.prototype.forEach.call(switchElements, (switchElement) => {
-        window.CookieConsent.config.categories[switchElement.dataset.category].wanted = switchElement.checked;
+      console.log('switchElements', tabGroups);
+      Array.prototype.forEach.call(tabGroups, (tabGroup) => {
+        var lightSwitch = tabGroup.querySelector('button.ccm__switch-group');
+        var status = lightSwitch.getAttribute('aria-checked');
+        console.log(tabGroup.dataset.category, status);
+        window.CookieConsent.config.categories[tabGroup.dataset.category].wanted = (status === 'true') ? true : false;
       });
+
+      console.log('window.CookieConsent.config.categories', window.CookieConsent.config.categories);
 
       var buttonSettings = document.querySelector('.ccb__edit');
       var buttonConsentGive = document.querySelector('.consent-give');
@@ -607,9 +613,16 @@ export default class Interface {
     }
 
     for(let action of window.CookieConsent.buffer.insertBefore) {
-      if (window.CookieConsent.config.categories[action.category].wanted === true) {
-        action.arguments[1] = (action.arguments[0].parentNode === null) ? action.this.lastChild : action.arguments[1];
-        Node.prototype.insertBefore.apply(action.this, action.arguments);
+      if (action.categories && action.categories.length > 1) {
+        if (action.categories.some(c => window.CookieConsent.config.categories[c].wanted)) {
+          action.arguments[1] = (action.arguments[0].parentNode === null) ? action.this.lastChild : action.arguments[1];
+          Node.prototype.insertBefore.apply(action.this, action.arguments);
+        }
+      } else {
+        if (window.CookieConsent.config.categories[action.category].wanted === true) {
+          action.arguments[1] = (action.arguments[0].parentNode === null) ? action.this.lastChild : action.arguments[1];
+          Node.prototype.insertBefore.apply(action.this, action.arguments);
+        }
       }
     }
   }

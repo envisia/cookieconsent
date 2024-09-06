@@ -38,21 +38,40 @@ export default class InsertScriptFilter extends Filter {
 
     Element.prototype.insertBefore = function(elem) {
     
+      var ele = null;
+      var consented = false;
+
       if(arguments[0].tagName === 'SCRIPT') {
         //console.log('Inserting:', arguments);
         for (let key in window.CookieConsent.config.services) {
           // Did user opt-in?
           if(window.CookieConsent.config.services[key].type === 'dynamic-script') {
             if(arguments[0].outerHTML.indexOf(window.CookieConsent.config.services[key].search) >= 0) {
-              if(window.CookieConsent.config.categories[window.CookieConsent.config.services[key].category].wanted === false) {
-                window.CookieConsent.buffer.insertBefore.push({'this': this, 'category': window.CookieConsent.config.services[key].category, arguments: arguments});
-                return undefined;
+              if(window.CookieConsent.config.categories[window.CookieConsent.config.services[key].category].wanted === false && !consented) {
+                if (ele === null) {
+                  ele = {
+                    'this': this,
+                    'category': window.CookieConsent.config.services[key].category,
+                    'categories': [window.CookieConsent.config.services[key].category],
+                    arguments: arguments
+                  };
+                } else {
+                  ele.categories.push(window.CookieConsent.config.services[key].category);
+                }
+              } else {
+                ele = null;
+                consented = true;
               }
             }
           }
         }
       }
   
+      if (!consented) {
+        window.CookieConsent.buffer.insertBefore.push(ele);
+        return;
+      }
+
       return Node.prototype.insertBefore.apply(this, arguments);
     }
   }
